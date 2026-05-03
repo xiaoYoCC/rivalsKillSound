@@ -24,15 +24,9 @@ local function getAudio()
 end
 
 -- ========================
--- 🔊 播放
+-- 🔊 播放（🔥改成不阻擋連殺）
 -- ========================
-local lastPlay = 0
-local COOLDOWN = 0.35
-
 local function play()
-    if tick() - lastPlay < COOLDOWN then return end
-    lastPlay = tick()
-
     local s = Instance.new("Sound")
     s.SoundId = getAudio()
     s.Volume = 1.5
@@ -97,7 +91,7 @@ UIS.InputBegan:Connect(function(input, gpe)
 end)
 
 -- ========================
--- 🧠 擊殺判定（🔥修正核心）
+-- 🧠 擊殺判定（🔥支援多目標）
 -- ========================
 local lastHitTime = {}
 local HIT_WINDOW = 2.2
@@ -111,7 +105,6 @@ local function setupCharacter(player, char)
     hum.HealthChanged:Connect(function(hp)
         if hp < lastHp then
 
-            -- 🔥 修正：不再用距離過濾（會漏狙擊）
             if isAttacking()
             and currentTarget == player
             and (tick() - lastTargetTime <= TARGET_LOCK_TIME + 0.4)
@@ -125,14 +118,12 @@ local function setupCharacter(player, char)
 
     hum.Died:Connect(function()
 
-        task.delay(0.15, function()
+        task.delay(0.1, function()
 
             local t = lastHitTime[player]
 
-            if t
-            and (tick() - t <= HIT_WINDOW)
-            and currentTarget == player
-            then
+            -- 🔥 關鍵：不再檢查 currentTarget（避免多殺失敗）
+            if t and (tick() - t <= HIT_WINDOW) then
                 play()
             end
 
@@ -160,7 +151,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ========================
--- 🧠 UI輔助（安全）
+-- 🧠 UI輔助
 -- ========================
 local keywords = {"eliminated","killed","擊殺","消滅"}
 
@@ -176,4 +167,4 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
     end
 end)
 
-print("🔥 已修正版本：遠距離擊殺正常觸發")
+print("🔥 多殺修正版已啟動（每殺必響）")
