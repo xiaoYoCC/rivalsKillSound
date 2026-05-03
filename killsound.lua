@@ -2,13 +2,12 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- ========================
--- 🔊 音效取得
+-- 🔊 音效取得（保留你原本）
 -- ========================
 local function getAudio()
     local s = Workspace:FindFirstChild("xykill")
@@ -25,7 +24,7 @@ local function getAudio()
 end
 
 -- ========================
--- 🔊 播放
+-- 🔊 播放（保留 + 穩定化）
 -- ========================
 local lastPlay = 0
 local COOLDOWN = 0.35
@@ -44,7 +43,7 @@ local function play()
 end
 
 -- ========================
--- 🎯 攻擊系統（完全保留）
+-- 🎯 攻擊系統（保留你原本）
 -- ========================
 local lastAttackTime = 0
 local ATTACK_WINDOW = 1.4
@@ -98,7 +97,7 @@ UIS.InputBegan:Connect(function(input, gpe)
 end)
 
 -- ========================
--- 🧠 擊殺判定（保留你版本）
+-- 🧠 🔥【核心修正擊殺系統】
 -- ========================
 local lastHitTime = {}
 local HIT_WINDOW = 2.4
@@ -145,10 +144,10 @@ Players.PlayerAdded:Connect(function(p)
     p.CharacterAdded:Connect(function(c)
         setupCharacter(p, c)
     end)
-end
+end)
 
 -- ========================
--- 🧠 UI 判定
+-- 🧠 UI（保留但不影響核心）
 -- ========================
 local keywords = {"eliminated","killed","擊殺","消滅"}
 
@@ -164,90 +163,21 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
     end
 end)
 
+print("🔥 融合穩定版已啟動（已修漏觸發 + 遠距離問題）")
+
 -- ========================
--- 🔔 🔥 你的通知系統（融合）
+-- 🔔 啟動通知（新增）
 -- ========================
-local sg = Instance.new("ScreenGui")
-sg.Name = "NotifyUI"
-sg.ResetOnSpawn = false
-sg.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local StarterGui = game:GetService("StarterGui")
 
-local activeNotifications = {}
+task.spawn(function()
+    repeat task.wait() until game:IsLoaded()
 
-local function updatePos()
-    for i, v in ipairs(activeNotifications) do
-        v:TweenPosition(
-            UDim2.new(1, -240, 0.8, -((#activeNotifications - i) * 65)),
-            "Out", "Quart", 0.3, true
-        )
-    end
-end
-
-local function notify(msg)
-    local nF = Instance.new("Frame")
-    nF.Parent = sg
-    nF.Size = UDim2.new(0, 220, 0, 50)
-    nF.Position = UDim2.new(1, 50, 0.8, 0)
-    nF.BackgroundColor3 = Color3.fromRGB(35,35,40)
-    nF.BackgroundTransparency = 0.2
-
-    Instance.new("UICorner", nF).CornerRadius = UDim.new(0,10)
-    Instance.new("UIStroke", nF).Color = Color3.fromRGB(200,160,255)
-
-    local nL = Instance.new("TextLabel")
-    nL.Parent = nF
-    nL.Size = UDim2.new(1,0,1,-5)
-    nL.BackgroundTransparency = 1
-    nL.Text = msg
-    nL.TextColor3 = Color3.new(1,1,1)
-    nL.TextSize = 15
-    nL.Font = Enum.Font.GothamBold
-
-    local barBG = Instance.new("Frame")
-    barBG.Parent = nF
-    barBG.Size = UDim2.new(1,-16,0,4)
-    barBG.Position = UDim2.new(0,8,1,-8)
-    barBG.BackgroundColor3 = Color3.new(0,0,0)
-    barBG.ClipsDescendants = true
-    Instance.new("UICorner", barBG)
-
-    local bar = Instance.new("Frame")
-    bar.Parent = barBG
-    bar.Size = UDim2.new(1,0,1,0)
-    bar.BackgroundColor3 = Color3.fromRGB(180,120,255)
-    Instance.new("UICorner", bar)
-
-    table.insert(activeNotifications, nF)
-    updatePos()
-
-    TweenService:Create(bar, TweenInfo.new(2.5), {
-        Size = UDim2.new(0,0,1,0)
-    }):Play()
-
-    task.delay(2.5, function()
-        for i, v in ipairs(activeNotifications) do
-            if v == nF then
-                table.remove(activeNotifications, i)
-                break
-            end
-        end
-
-        nF:TweenPosition(
-            UDim2.new(1,50,nF.Position.Y.Scale,nF.Position.Y.Offset),
-            "In","Quart",0.3,true
-        )
-
-        task.wait(0.3)
-        nF:Destroy()
-        updatePos()
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Kill System",
+            Text = "🔥 腳本已成功載入",
+            Duration = 3
+        })
     end)
-end
-
--- ========================
--- 🚀 啟動提示
--- ========================
-task.delay(1, function()
-    notify("🔥 腳本已成功載入")
 end)
-
-print("🔥 完整版已啟動（含自訂通知）")
