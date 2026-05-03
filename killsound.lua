@@ -172,3 +172,18 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
 end)
 
 print("🔥 融合穩定版已啟動（已修漏觸發 + 遠距離問題）")
+
+local StarterGui = game:GetService("StarterGui")
+local SoundService = game:GetService("SoundService")
+
+-- 🔥 等 UI 系統準備好（避免 SetCore 失敗）
+task.spawn(function()
+    repeat task.wait() until game:IsLoaded()
+
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Kill System",
+            Text = "🔥 腳本已成功載入",
+            Duration = 3
+        })
+    end)
