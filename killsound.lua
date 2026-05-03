@@ -7,7 +7,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- ========================
--- 🔊 音效取得（全兼容）
+-- 🔊 音效取得
 -- ========================
 local function getAudio()
     local s = Workspace:FindFirstChild("xykill")
@@ -37,7 +37,7 @@ local function play()
 
     local s = Instance.new("Sound")
     s.SoundId = killAudio
-    s.Volume = 0.5
+    s.Volume = 1
     s.Parent = SoundService
     s:Play()
 
@@ -45,53 +45,84 @@ local function play()
 end
 
 -- ========================
--- 🎯 攻擊狀態偵測
+-- 🎯 攻擊 + 鎖定目標
 -- ========================
 local lastAttackTime = 0
 local ATTACK_WINDOW = 1.2
+
+local currentTarget = nil
+local lastTargetTime = 0
+local TARGET_LOCK_TIME = 0.8
+
+local function isAttacking()
+    return (tick() - lastAttackTime) <= ATTACK_WINDOW
+end
+
+local function getTarget()
+    if not Camera then return nil end
+
+    local ray = Camera:ViewportPointToRay(
+        Camera.ViewportSize.X/2,
+        Camera.ViewportSize.Y/2
+    )
+
+    local params = RaycastParams.new()
+    params.FilterDescendantsInstances = {LocalPlayer.Character}
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+
+    local result = Workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+
+    if result and result.Instance then
+        local model = result.Instance:FindFirstAncestorOfClass("Model")
+        if model then
+            return Players:GetPlayerFromCharacter(model)
+        end
+    end
+
+    return nil
+end
 
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
 
     if input.UserInputType == Enum.UserInputType.MouseButton1
     or input.UserInputType == Enum.UserInputType.Touch then
+        
         lastAttackTime = tick()
+
+        local target = getTarget()
+        if target then
+            currentTarget = target
+            lastTargetTime = tick()
+        end
     end
 end)
 
-local function isAttacking()
-    return (tick() - lastAttackTime) <= ATTACK_WINDOW
-end
-
 -- ========================
--- 📏 距離 + 視角判定
+-- 📏 距離 + 視角
 -- ========================
 local MAX_DISTANCE = 120
-local MAX_ANGLE = 60 -- 視角角度限制
+local MAX_ANGLE = 60
 
 local function isValidTarget(char)
     if not LocalPlayer.Character then return false end
 
-    local hrp1 = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local hrp2 = char:FindFirstChild("HumanoidRootPart")
+    local a = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local b = char:FindFirstChild("HumanoidRootPart")
 
-    if not (hrp1 and hrp2) then return false end
+    if not (a and b) then return false end
 
-    -- 距離
-    local dir = (hrp2.Position - hrp1.Position)
-    local dist = dir.Magnitude
-    if dist > MAX_DISTANCE then return false end
+    local dir = (b.Position - a.Position)
+    if dir.Magnitude > MAX_DISTANCE then return false end
 
-    -- 視角
-    local look = Camera.CFrame.LookVector
-    local dot = look:Dot(dir.Unit)
+    local dot = Camera.CFrame.LookVector:Dot(dir.Unit)
     local angle = math.deg(math.acos(dot))
 
     return angle <= MAX_ANGLE
 end
 
 -- ========================
--- 🧠 血量擊殺判定（核心）
+-- 🧠 擊殺判定（已修正）
 -- ========================
 local lastHitTime = {}
 local HIT_WINDOW = 1.5
@@ -104,7 +135,11 @@ local function setupCharacter(player, char)
 
     hum.HealthChanged:Connect(function(hp)
         if hp < lastHp then
-            if isAttacking() and isValidTarget(char) then
+            if isAttacking()
+            and isValidTarget(char)
+            and currentTarget == player
+            and (tick() - lastTargetTime <= TARGET_LOCK_TIME)
+            then
                 lastHitTime[player] = tick()
             end
         end
@@ -114,7 +149,10 @@ local function setupCharacter(player, char)
     hum.Died:Connect(function()
         local t = lastHitTime[player]
 
-        if t and (tick() - t <= HIT_WINDOW) and isAttacking() then
+        if t
+        and (tick() - t <= HIT_WINDOW)
+        and currentTarget == player
+        then
             play()
         end
 
@@ -141,7 +179,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ========================
--- 🧠 UI 補強（低權重）
+-- 🧠 UI（降權，只在攻擊時觸發）
 -- ========================
 local keywords = {"eliminated","killed","擊殺","消滅"}
 
@@ -159,24 +197,4 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
     end
 end)
 
--- ========================
--- 🧠 leaderstats 補強（低權重）
--- ========================
-task.spawn(function()
-    local stats = LocalPlayer:FindFirstChild("leaderstats")
-    if not stats then return end
-
-    local kills = stats:FindFirstChild("Kills")
-    if not kills then return end
-
-    local last = kills.Value
-
-    kills.Changed:Connect(function(v)
-        if v > last then
-            play()
-        end
-        last = v
-    end)
-end)
-
-print("😈 Ultimate Kill Sound 已啟動（接近0誤判）")
+print("😈 修正版擊殺音效 已啟動（不會被打觸發）")
