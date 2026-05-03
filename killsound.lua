@@ -37,7 +37,7 @@ local function play()
 
     local s = Instance.new("Sound")
     s.SoundId = killAudio
-    s.Volume = 1
+    s.Volume = 2
     s.Parent = SoundService
     s:Play()
 
