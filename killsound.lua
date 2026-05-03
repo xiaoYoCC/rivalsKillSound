@@ -1,45 +1,66 @@
--- [[ xiaoYo 音效分發版 ]]
--- 檢查執行器環境
+-- [[ xiaoYo Rivals 自訂擊殺音效系統 ]]
+-- 核心檢查：確保執行器支援必要的函數
 if not (writefile and getcustomasset and isfile) then
-    game.Players.LocalPlayer:Kick("你的執行器太爛了，不支援自定義音效功能")
-    return
+    return warn("❌ 你的執行器不支援自定義資產功能（getcustomasset）")
 end
 
 local function getAudio(name, url)
-    if not isfile(name) then
-        local success, res = pcall(function()
-            return game:HttpGet(url) -- 使用 HttpGet 更簡單
-        end)
-        if success then writefile(name, res) end
+    local path = name
+    if not isfile(path) then
+        print("📥 正在從 GitHub 下載音效...")
+        local success, content = pcall(function() return game:HttpGet(url) end)
+        if success and content then
+            writefile(path, content)
+            print("✅ 音效下載成功：" .. name)
+        else
+            warn("❌ 下載失敗，請檢查網路或網址")
+            return nil
+        end
     end
-    return getcustomasset(name)
+    return getcustomasset(path)
 end
 
--- 設定音效 (範例網址，記得換成你自己的)
-local killSound = getAudio("xy_kill.mp3", "https://github.com/xiaoYoCC/rivalsKillSound/blob/1dfea86f260505e92fe52381cdf9c0548c5cb7ff/xykill.mp3")
+-- [[ 設定區 ]]
+-- 這裡使用轉換後的 Raw 網址
+local killAudioID = getAudio("xykill.mp3", "https://raw.githubusercontent.com/xiaoYoCC/rivalsKillSound/main/xykill.mp3")
 
-local function play(id)
-    local s = Instance.new("Sound", game:GetService("SoundService"))
-    s.SoundId = id
-    s.Volume = 2
-    s:Play()
-    game:GetService("Debris"):AddItem(s, 5)
+local function playKillSound()
+    if not killAudioID then return end
+    local sound = Instance.new("Sound")
+    sound.SoundId = killAudioID
+    sound.Volume = 2.5
+    sound.Parent = game:GetService("SoundService")
+    sound.PlayOnRemove = true
+    sound:Play()
+    sound:Destroy()
 end
 
--- Rivals 邏輯
+--------------------------------------------------
+-- 🎯 Rivals 擊殺偵測邏輯
+--------------------------------------------------
 local player = game.Players.LocalPlayer
-local kills = player:WaitForChild("leaderstats"):WaitForChild("Kills")
 
--- 擊殺偵測
-kills.Changed:Connect(function()
-    play(killSound)
-end)
-
--- 打擊偵測 (監聽 UI 標記)
-player.PlayerGui.DescendantAdded:Connect(function(v)
-    if v.Name == "Hitmarker" or v.Name:find("Damage") then
-        play(hitSound)
+-- 方式 A：監控 Leaderstats (最準確的擊殺判定)
+task.spawn(function()
+    local stats = player:WaitForChild("leaderstats", 10)
+    if stats then
+        local kills = stats:WaitForChild("Kills", 10)
+        if kills then
+            kills.Changed:Connect(function()
+                -- 只要擊殺數變動，就播放音效
+                playKillSound()
+            end)
+        end
     end
 end)
 
-print("✨ xiaoYo 雲端音效腳本已載入！")
+-- 方式 B：監控擊殺提示 UI (雙重保險)
+player.PlayerGui.DescendantAdded:Connect(function(desc)
+    -- Rivals 的擊殺 UI 標籤通常包含 "Kill" 或 "Eliminated"
+    if desc.Name == "KillFeedItem" or (desc:IsA("TextLabel") and desc.Text:find("ELIMINATED")) then
+        playKillSound()
+    end
+end)
+
+print("✨ xiaoYo 擊殺音效腳本已啟動！")
+print("🔊 目前載入：xykill.mp3")
