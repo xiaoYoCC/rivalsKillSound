@@ -7,23 +7,17 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- ========================
--- 🔊 音效取得
+-- 🎧 音效（Workspace版）
 -- ========================
-local function getAudio()
+local function getSoundId()
     local s = Workspace:FindFirstChild("xykill")
     if s and s:IsA("Sound") then
         return s.SoundId
     end
-
-    local fileName = "xykill.mp3"
-    if isfile and isfile(fileName) then
-        return getcustomasset(fileName)
-    end
-
     return "rbxassetid://117487354926114"
 end
 
-local killAudio = getAudio()
+local killAudio = getSoundId()
 
 -- ========================
 -- 🔊 播放（防重複）
@@ -45,7 +39,16 @@ local function play()
 end
 
 -- ========================
--- 🎯 攻擊 + 鎖定目標
+-- 🧠 存活判定（關鍵）
+-- ========================
+local function isAlive()
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    return hum and hum.Health > 0
+end
+
+-- ========================
+-- 🎯 攻擊 + 鎖定
 -- ========================
 local lastAttackTime = 0
 local ATTACK_WINDOW = 1.2
@@ -84,10 +87,11 @@ end
 
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
+    if not isAlive() then return end
 
     if input.UserInputType == Enum.UserInputType.MouseButton1
     or input.UserInputType == Enum.UserInputType.Touch then
-        
+
         lastAttackTime = tick()
 
         local target = getTarget()
@@ -122,9 +126,9 @@ local function isValidTarget(char)
 end
 
 -- ========================
--- 🧠 擊殺判定（已修正）
+-- 🧠 擊殺判定（修正版核心）
 -- ========================
-local lastHitTime = {}
+local lastHitByYou = {}
 local HIT_WINDOW = 1.5
 
 local function setupCharacter(player, char)
@@ -135,19 +139,22 @@ local function setupCharacter(player, char)
 
     hum.HealthChanged:Connect(function(hp)
         if hp < lastHp then
-            if isAttacking()
-            and isValidTarget(char)
+            if isAlive()
+            and isAttacking()
             and currentTarget == player
+            and isValidTarget(char)
             and (tick() - lastTargetTime <= TARGET_LOCK_TIME)
             then
-                lastHitTime[player] = tick()
+                lastHitByYou[player] = tick()
             end
         end
         lastHp = hp
     end)
 
     hum.Died:Connect(function()
-        local t = lastHitTime[player]
+        if not isAlive() then return end -- 🔥 觀戰/死亡直接封鎖
+
+        local t = lastHitByYou[player]
 
         if t
         and (tick() - t <= HIT_WINDOW)
@@ -156,7 +163,7 @@ local function setupCharacter(player, char)
             play()
         end
 
-        lastHitTime[player] = nil
+        lastHitByYou[player] = nil
     end)
 end
 
@@ -179,22 +186,22 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ========================
--- 🧠 UI（降權，只在攻擊時觸發）
+-- 🧠 UI（只在活著時允許）
 -- ========================
 local keywords = {"eliminated","killed","擊殺","消滅"}
 
 LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
+    if not isAlive() then return end
+
     if v:IsA("TextLabel") then
         local text = string.lower(v.Text)
         for _, k in ipairs(keywords) do
-            if text:find(k) then
-                if isAttacking() then
-                    play()
-                end
+            if text:find(k) and isAttacking() then
+                play()
                 break
             end
         end
     end
 end)
 
-print("😈 修正版擊殺音效 已啟動（不會被打觸發）")
+print("🔥 Stable Kill Sound 已啟動（觀戰/誤觸已封鎖）")
