@@ -7,7 +7,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- ========================
--- 🔊 音效取得
+-- 🔊 音效取得（保留你原本）
 -- ========================
 local function getAudio()
     local s = Workspace:FindFirstChild("xykill")
@@ -24,7 +24,7 @@ local function getAudio()
 end
 
 -- ========================
--- 🔊 播放
+-- 🔊 播放（保留 + 穩定化）
 -- ========================
 local lastPlay = 0
 local COOLDOWN = 0.35
@@ -43,7 +43,7 @@ local function play()
 end
 
 -- ========================
--- 🎯 攻擊系統
+-- 🎯 攻擊系統（保留你原本）
 -- ========================
 local lastAttackTime = 0
 local ATTACK_WINDOW = 1.4
@@ -97,10 +97,10 @@ UIS.InputBegan:Connect(function(input, gpe)
 end)
 
 -- ========================
--- 🧠 擊殺判定（🔥修正核心）
+-- 🧠 🔥【核心修正擊殺系統】
 -- ========================
 local lastHitTime = {}
-local HIT_WINDOW = 2.2
+local HIT_WINDOW = 2.4 -- 🔥 稍微放寬避免漏判
 
 local function setupCharacter(player, char)
     if player == LocalPlayer then return end
@@ -111,11 +111,8 @@ local function setupCharacter(player, char)
     hum.HealthChanged:Connect(function(hp)
         if hp < lastHp then
 
-            -- 🔥 修正：不再用距離過濾（會漏狙擊）
-            if isAttacking()
-            and currentTarget == player
-            and (tick() - lastTargetTime <= TARGET_LOCK_TIME + 0.4)
-            then
+            -- 🔥 改良核心：不再依賴 currentTarget 穩定性
+            if isAttacking() then
                 lastHitTime[player] = tick()
             end
         end
@@ -129,10 +126,8 @@ local function setupCharacter(player, char)
 
             local t = lastHitTime[player]
 
-            if t
-            and (tick() - t <= HIT_WINDOW)
-            and currentTarget == player
-            then
+            -- 🔥 改成「最近你有打他就算」
+            if t and (tick() - t <= HIT_WINDOW) then
                 play()
             end
 
@@ -160,7 +155,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ========================
--- 🧠 UI輔助（安全）
+-- 🧠 UI（保留但不影響核心）
 -- ========================
 local keywords = {"eliminated","killed","擊殺","消滅"}
 
@@ -176,4 +171,4 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
     end
 end)
 
-print("🔥 已修正版本：遠距離擊殺正常觸發")
+print("🔥 融合穩定版已啟動（已修漏觸發 + 遠距離問題）")
