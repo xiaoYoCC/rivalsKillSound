@@ -100,7 +100,7 @@ end)
 -- 🧠 🔥【核心修正擊殺系統】
 -- ========================
 local lastHitTime = {}
-local HIT_WINDOW = 2.4
+local HIT_WINDOW = 2.4 -- 🔥 稍微放寬避免漏判
 
 local function setupCharacter(player, char)
     if player == LocalPlayer then return end
@@ -110,19 +110,27 @@ local function setupCharacter(player, char)
 
     hum.HealthChanged:Connect(function(hp)
         if hp < lastHp then
+
+            -- 🔥 改良核心：不再依賴 currentTarget 穩定性
             if isAttacking() then
                 lastHitTime[player] = tick()
             end
         end
+
         lastHp = hp
     end)
 
     hum.Died:Connect(function()
+
         task.delay(0.15, function()
+
             local t = lastHitTime[player]
+
+            -- 🔥 改成「最近你有打他就算」
             if t and (tick() - t <= HIT_WINDOW) then
                 play()
             end
+
             lastHitTime[player] = nil
         end)
     end)
@@ -164,20 +172,3 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
 end)
 
 print("🔥 融合穩定版已啟動（已修漏觸發 + 遠距離問題）")
-
--- ========================
--- 🔔 啟動通知（新增）
--- ========================
-local StarterGui = game:GetService("StarterGui")
-
-task.spawn(function()
-    repeat task.wait() until game:IsLoaded()
-
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "Kill System",
-            Text = "🔥 腳本已成功載入",
-            Duration = 3
-        })
-    end)
-end)
