@@ -7,7 +7,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- ========================
--- 🔊 音效取得（修正：不快取）
+-- 🔊 音效取得
 -- ========================
 local function getAudio()
     local s = Workspace:FindFirstChild("xykill")
@@ -24,7 +24,7 @@ local function getAudio()
 end
 
 -- ========================
--- 🔊 播放（穩定版）
+-- 🔊 播放
 -- ========================
 local lastPlay = 0
 local COOLDOWN = 0.35
@@ -34,8 +34,8 @@ local function play()
     lastPlay = tick()
 
     local s = Instance.new("Sound")
-    s.SoundId = getAudio() -- 🔥 每次即時抓，避免第一次失效
-    s.Volume = 0.5
+    s.SoundId = getAudio()
+    s.Volume = 1.5
     s.Parent = SoundService
     s:Play()
 
@@ -43,14 +43,14 @@ local function play()
 end
 
 -- ========================
--- 🎯 攻擊 + 鎖定
+-- 🎯 攻擊系統
 -- ========================
 local lastAttackTime = 0
-local ATTACK_WINDOW = 1.4 -- 🔥 放寬一點（原本太緊）
+local ATTACK_WINDOW = 1.4
 
 local currentTarget = nil
 local lastTargetTime = 0
-local TARGET_LOCK_TIME = 0.35
+local TARGET_LOCK_TIME = 0.8
 
 local function isAttacking()
     return (tick() - lastAttackTime) <= ATTACK_WINDOW
@@ -97,33 +97,10 @@ UIS.InputBegan:Connect(function(input, gpe)
 end)
 
 -- ========================
--- 📏 距離 + 視角
--- ========================
-local MAX_DISTANCE = 120
-local MAX_ANGLE = 60
-
-local function isValidTarget(char)
-    if not LocalPlayer.Character then return false end
-
-    local a = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local b = char:FindFirstChild("HumanoidRootPart")
-
-    if not (a and b) then return false end
-
-    local dir = (b.Position - a.Position)
-    if dir.Magnitude > MAX_DISTANCE then return false end
-
-    local dot = Camera.CFrame.LookVector:Dot(dir.Unit)
-    local angle = math.deg(math.acos(dot))
-
-    return angle <= MAX_ANGLE
-end
-
--- ========================
--- 🧠 擊殺判定（修正核心）
+-- 🧠 擊殺判定（🔥修正核心）
 -- ========================
 local lastHitTime = {}
-local HIT_WINDOW = 2.2 -- 🔥 關鍵：修你「要打兩次才觸發」
+local HIT_WINDOW = 2.2
 
 local function setupCharacter(player, char)
     if player == LocalPlayer then return end
@@ -134,10 +111,10 @@ local function setupCharacter(player, char)
     hum.HealthChanged:Connect(function(hp)
         if hp < lastHp then
 
+            -- 🔥 修正：不再用距離過濾（會漏狙擊）
             if isAttacking()
-            and isValidTarget(char)
             and currentTarget == player
-            and (tick() - lastTargetTime <= TARGET_LOCK_TIME + 0.4) -- 🔥 補延遲
+            and (tick() - lastTargetTime <= TARGET_LOCK_TIME + 0.4)
             then
                 lastHitTime[player] = tick()
             end
@@ -148,7 +125,6 @@ local function setupCharacter(player, char)
 
     hum.Died:Connect(function()
 
-        -- 🔥 延遲避免 Roblox death sync 問題
         task.delay(0.15, function()
 
             local t = lastHitTime[player]
@@ -184,7 +160,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ========================
--- 🧠 UI（保留但安全）
+-- 🧠 UI輔助（安全）
 -- ========================
 local keywords = {"eliminated","killed","擊殺","消滅"}
 
@@ -200,4 +176,4 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
     end
 end)
 
-print("🔥 已修正版：穩定擊殺音效系統")
+print("🔥 已修正版本：遠距離擊殺正常觸發")
