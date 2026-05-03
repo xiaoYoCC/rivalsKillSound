@@ -7,26 +7,75 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- ========================
--- 🔊 音效取得
+-- 🎧 音檔下載系統
 -- ========================
-local function getAudio()
-    local s = Workspace:FindFirstChild("xykill")
-    if s and s:IsA("Sound") then
-        return s.SoundId
-    end
+local FILE_NAME = "xykill.mp3"
+local VERSION_FILE = "xykill_version.txt"
+local CURRENT_VERSION = "1.0"
 
-    local fileName = "xykill.mp3"
-    if isfile and isfile(fileName) then
-        return getcustomasset(fileName)
-    end
+local URL = "https://raw.githubusercontent.com/xiaoYoCC/rivalsKillSound/main/xykill.mp3"
+local FALLBACK_SOUND = "rbxassetid://117487354926114"
 
-    return "rbxassetid://117487354926114"
+local function fileOk()
+    if not isfile then return false end
+    if not isfile(FILE_NAME) then return false end
+
+    local ok, data = pcall(function()
+        return readfile(FILE_NAME)
+    end)
+
+    return ok and data and #data > 1000
 end
 
-local killAudio = getAudio()
+local function download()
+    if not writefile or not game:HttpGet then
+        return false
+    end
+
+    local ok, data = pcall(function()
+        return game:HttpGet(URL)
+    end)
+
+    if ok and data and #data > 1000 then
+        writefile(FILE_NAME, data)
+        writefile(VERSION_FILE, CURRENT_VERSION)
+        print("✅ 音效下載完成")
+        return true
+    end
+
+    warn("❌ 音效下載失敗")
+    return false
+end
+
+local function initAudio()
+    local needUpdate = false
+
+    if not fileOk() then
+        needUpdate = true
+    elseif not isfile(VERSION_FILE) then
+        needUpdate = true
+    else
+        local ver = readfile(VERSION_FILE)
+        if ver ~= CURRENT_VERSION then
+            needUpdate = true
+        end
+    end
+
+    if needUpdate then
+        download()
+    end
+
+    if fileOk() then
+        return getcustomasset(FILE_NAME)
+    end
+
+    return FALLBACK_SOUND
+end
+
+local killAudio = initAudio()
 
 -- ========================
--- 🔊 播放（防重複）
+-- 🔊 播放系統（防重複）
 -- ========================
 local lastPlay = 0
 local COOLDOWN = 0.4
@@ -37,7 +86,7 @@ local function play()
 
     local s = Instance.new("Sound")
     s.SoundId = killAudio
-    s.Volume = 2
+    s.Volume = 1.5
     s.Parent = SoundService
     s:Play()
 
@@ -45,7 +94,7 @@ local function play()
 end
 
 -- ========================
--- 🎯 攻擊 + 鎖定目標
+-- 🎯 攻擊 + 準心鎖定
 -- ========================
 local lastAttackTime = 0
 local ATTACK_WINDOW = 1.2
@@ -87,7 +136,7 @@ UIS.InputBegan:Connect(function(input, gpe)
 
     if input.UserInputType == Enum.UserInputType.MouseButton1
     or input.UserInputType == Enum.UserInputType.Touch then
-        
+
         lastAttackTime = tick()
 
         local target = getTarget()
@@ -122,7 +171,7 @@ local function isValidTarget(char)
 end
 
 -- ========================
--- 🧠 擊殺判定（已修正）
+-- 🧠 擊殺判定（核心）
 -- ========================
 local lastHitTime = {}
 local HIT_WINDOW = 1.5
@@ -179,7 +228,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ========================
--- 🧠 UI（降權，只在攻擊時觸發）
+-- 🧠 UI（輔助）
 -- ========================
 local keywords = {"eliminated","killed","擊殺","消滅"}
 
@@ -187,14 +236,12 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
     if v:IsA("TextLabel") then
         local text = string.lower(v.Text)
         for _, k in ipairs(keywords) do
-            if text:find(k) then
-                if isAttacking() then
-                    play()
-                end
+            if text:find(k) and isAttacking() then
+                play()
                 break
             end
         end
     end
 end)
 
-print("😈 修正版擊殺音效 已啟動（不會被打觸發）")
+print("🔥 Ultimate Kill Sound 系統已啟動（含自動下載）")
