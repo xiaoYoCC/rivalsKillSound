@@ -97,10 +97,10 @@ UIS.InputBegan:Connect(function(input, gpe)
 end)
 
 -- ========================
--- 🧠 ✅ 修正擊殺判定（重點）
+-- 🧠 擊殺判定（🔥修正核心）
 -- ========================
 local lastHitTime = {}
-local HIT_WINDOW = 2.4
+local HIT_WINDOW = 2.2
 
 local function setupCharacter(player, char)
     if player == LocalPlayer then return end
@@ -110,11 +110,11 @@ local function setupCharacter(player, char)
 
     hum.HealthChanged:Connect(function(hp)
         if hp < lastHp then
-            
-            -- ✅ 修正：一定要是你鎖定的人
+
+            -- 🔥 修正：不再用距離過濾（會漏狙擊）
             if isAttacking()
             and currentTarget == player
-            and (tick() - lastTargetTime <= TARGET_LOCK_TIME)
+            and (tick() - lastTargetTime <= TARGET_LOCK_TIME + 0.4)
             then
                 lastHitTime[player] = tick()
             end
@@ -124,11 +124,15 @@ local function setupCharacter(player, char)
     end)
 
     hum.Died:Connect(function()
+
         task.delay(0.15, function()
 
             local t = lastHitTime[player]
 
-            if t and (tick() - t <= HIT_WINDOW) then
+            if t
+            and (tick() - t <= HIT_WINDOW)
+            and currentTarget == player
+            then
                 play()
             end
 
@@ -156,7 +160,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ========================
--- 🧠 UI（安全版）
+-- 🧠 UI輔助（安全）
 -- ========================
 local keywords = {"eliminated","killed","擊殺","消滅"}
 
@@ -164,9 +168,7 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
     if v:IsA("TextLabel") then
         local text = string.lower(v.Text)
         for _, k in ipairs(keywords) do
-            if text:find(k)
-            and isAttacking()
-            then
+            if text:find(k) and isAttacking() then
                 play()
                 break
             end
@@ -174,4 +176,4 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
     end
 end)
 
-print("🔥 修正版已啟動（不會再亂觸發）")
+print("🔥 已修正版本：遠距離擊殺正常觸發")
