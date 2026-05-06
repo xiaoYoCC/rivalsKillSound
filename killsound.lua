@@ -1,3 +1,24 @@
+-- ========================
+-- 🔄 自動預約執行 (匹配後自動重啟)
+-- ========================
+local function autoQueue()
+    local scriptURL = "https://raw.githubusercontent.com/xiaoYoCC/rivalsKillSound/main/killsound.lua"
+    local queue_func = queue_on_teleport or (syn and syn.queue_on_teleport)
+    
+    if queue_func then
+        queue_func([[
+            repeat task.wait() until game:IsLoaded()
+            loadstring(game:HttpGet("]] .. scriptURL .. [["))()
+        ]])
+    end
+end
+
+-- 只要腳本一跑就立即預約下一次
+autoQueue()
+
+-- ========================
+-- 核心邏輯開始 (未更動任何原始代碼)
+-- ========================
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
@@ -167,4 +188,4 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
     end
 end)
 
-print("🔥 多殺修正版已啟動（每殺必響）")
+print("🔥 多殺修正版已啟動（每殺必響）並已預約自動換服執行")
