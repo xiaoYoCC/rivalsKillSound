@@ -1,5 +1,5 @@
 -- ========================
--- 🔄 自動預約執行 (匹配後自動重啟)
+-- 🔄 自動預約執行
 -- ========================
 local function autoQueue()
     local scriptURL = "https://raw.githubusercontent.com/xiaoYoCC/rivalsKillSound/main/killsound.lua"
@@ -27,7 +27,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- ========================
--- 🔊 音效取得 (加入 cache)
+-- 🔊 音效取得 (cache)
 -- ========================
 local cachedSoundId = nil
 local function getAudio()
@@ -45,14 +45,21 @@ local function getAudio()
         return cachedSoundId
     end
 
-    cachedSoundId = "rbxassetid://117487354926114"
+    cachedSoundId = "rbxassetid://135097031120155"
     return cachedSoundId
 end
 
 -- ========================
--- 🔊 播放
+-- 🔊 播放 (cooldown 防重疊)
 -- ========================
+local lastPlayTime = 0
+local PLAY_COOLDOWN = 0.3
+
 local function play()
+    local now = tick()
+    if (now - lastPlayTime) < PLAY_COOLDOWN then return end
+    lastPlayTime = now
+
     local s = Instance.new("Sound")
     s.SoundId = getAudio()
     s.Volume = 1.5
