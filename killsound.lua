@@ -13,11 +13,10 @@ local function autoQueue()
     end
 end
 
--- 只要腳本一跑就立即預約下一次
 autoQueue()
 
 -- ========================
--- 核心邏輯開始 (未更動任何原始代碼)
+-- 核心邏輯
 -- ========================
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -28,24 +27,30 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- ========================
--- 🔊 音效取得
+-- 🔊 音效取得 (加入 cache)
 -- ========================
+local cachedSoundId = nil
 local function getAudio()
+    if cachedSoundId then return cachedSoundId end
+
     local s = Workspace:FindFirstChild("xykill")
     if s and s:IsA("Sound") then
-        return s.SoundId
+        cachedSoundId = s.SoundId
+        return cachedSoundId
     end
 
     local fileName = "xykill.mp3"
     if isfile and isfile(fileName) then
-        return getcustomasset(fileName)
+        cachedSoundId = getcustomasset(fileName)
+        return cachedSoundId
     end
 
-    return "rbxassetid://117487354926114"
+    cachedSoundId = "rbxassetid://117487354926114"
+    return cachedSoundId
 end
 
 -- ========================
--- 🔊 播放（🔥改成不阻擋連殺）
+-- 🔊 播放
 -- ========================
 local function play()
     local s = Instance.new("Sound")
@@ -53,7 +58,6 @@ local function play()
     s.Volume = 1.5
     s.Parent = SoundService
     s:Play()
-
     game:GetService("Debris"):AddItem(s, 5)
 end
 
@@ -65,7 +69,7 @@ local ATTACK_WINDOW = 1.4
 
 local currentTarget = nil
 local lastTargetTime = 0
-local TARGET_LOCK_TIME = 0.8
+local TARGET_LOCK_TIME = 1.2
 
 local function isAttacking()
     return (tick() - lastAttackTime) <= ATTACK_WINDOW
@@ -112,7 +116,7 @@ UIS.InputBegan:Connect(function(input, gpe)
 end)
 
 -- ========================
--- 🧠 擊殺判定（🔥支援多目標）
+-- 🧠 擊殺判定
 -- ========================
 local lastHitTime = {}
 local HIT_WINDOW = 2.2
@@ -124,11 +128,14 @@ local function setupCharacter(player, char)
     local lastHp = hum.Health
 
     hum.HealthChanged:Connect(function(hp)
-        if hp < lastHp then
+        local myChar = LocalPlayer.Character
+        local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+        if not myHum or myHum.Health <= 0 then return end
 
+        if hp < lastHp then
             if isAttacking()
             and currentTarget == player
-            and (tick() - lastTargetTime <= TARGET_LOCK_TIME + 0.4)
+            and (tick() - lastTargetTime <= TARGET_LOCK_TIME)
             then
                 lastHitTime[player] = tick()
             end
@@ -138,16 +145,11 @@ local function setupCharacter(player, char)
     end)
 
     hum.Died:Connect(function()
-
         task.delay(0.1, function()
-
             local t = lastHitTime[player]
-
-            -- 🔥 關鍵：不再檢查 currentTarget（避免多殺失敗）
             if t and (tick() - t <= HIT_WINDOW) then
                 play()
             end
-
             lastHitTime[player] = nil
         end)
     end)
@@ -171,19 +173,27 @@ Players.PlayerAdded:Connect(function(p)
     end)
 end)
 
+Players.PlayerRemoving:Connect(function(p)
+    lastHitTime[p] = nil
+end)
+
 -- ========================
 -- 🧠 UI輔助
 -- ========================
 local keywords = {"eliminated","killed","擊殺","消滅"}
 
 LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
-    if v:IsA("TextLabel") then
-        local text = string.lower(v.Text)
-        for _, k in ipairs(keywords) do
-            if text:find(k) and isAttacking() then
-                play()
-                break
-            end
+    if not v:IsA("TextLabel") then return end
+
+    local myChar = LocalPlayer.Character
+    local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+    if not myHum or myHum.Health <= 0 then return end
+
+    local text = string.lower(v.Text)
+    for _, k in ipairs(keywords) do
+        if text:find(k) and isAttacking() then
+            play()
+            break
         end
     end
 end)
