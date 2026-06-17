@@ -72,11 +72,11 @@ end
 -- 🎯 攻擊系統
 -- ========================
 local lastAttackTime = 0
-local ATTACK_WINDOW = 1.4
+local ATTACK_WINDOW = 2.0
 
 local currentTarget = nil
 local lastTargetTime = 0
-local TARGET_LOCK_TIME = 1.2
+local TARGET_LOCK_TIME = 2.0
 
 local function isAttacking()
     return (tick() - lastAttackTime) <= ATTACK_WINDOW
@@ -94,7 +94,7 @@ local function getTarget()
     params.FilterDescendantsInstances = {LocalPlayer.Character}
     params.FilterType = Enum.RaycastFilterType.Blacklist
 
-    local result = Workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+    local result = Workspace:Raycast(ray.Origin, ray.Direction * 2000, params)
 
     if result and result.Instance then
         local model = result.Instance:FindFirstAncestorOfClass("Model")
