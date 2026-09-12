@@ -204,5 +204,3 @@ LocalPlayer.PlayerGui.DescendantAdded:Connect(function(v)
         end
     end
 end)
-
-print("🔥 多殺修正版已啟動（每殺必響）並已預約自動換服執行")
